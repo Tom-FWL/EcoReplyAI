@@ -2,7 +2,17 @@ import React, { useState } from 'react';
 import { Upload, FileText, AlertCircle, CheckCircle, X } from 'lucide-react';
 import { WhatsAppParser } from '../lib/whatsapp-parser';
 
+import { generateEmbedding } from '../lib/ai-utils'; // Import generateEmbedding
+import * as tf from '@tensorflow/tfjs'; // Import tf
+
 export function ChatUpload() {
+  // Define the type for parsed messages based on the WhatsAppParser output
+  interface ParsedMessage {
+    sender: string;
+    message: string;
+    timestamp: string; // ISO format string
+    embedding?: tf.Tensor; // Add optional embedding field
+  }
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Array<{
     name: string;
@@ -11,6 +21,7 @@ export function ChatUpload() {
     messageCount?: number;
     clientName?: string;
   }>>([]);
+  const [parsedMessages, setParsedMessages] = useState<ParsedMessage[]>([]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -35,7 +46,7 @@ export function ChatUpload() {
     processFiles(files);
   };
 
-  const processFiles = (files: File[]) => {
+  const processFiles = async (files: File[]) => { // Make processFiles async
     files.forEach(file => {
       if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
         const fileInfo = {
@@ -51,7 +62,15 @@ export function ChatUpload() {
         reader.onload = (e) => {
           try {
             const content = e.target?.result as string;
-            const messages = WhatsAppParser.parseWhatsAppExport(content);
+            let messages = WhatsAppParser.parseWhatsAppExport(content);
+
+            // Generate embeddings for each message
+            const messagesWithEmbeddings = messages.map(async msg => {
+              const embedding = await generateEmbedding(msg.message);
+              return { ...msg, embedding };
+            });
+            messages = await Promise.all(messagesWithEmbeddings); // Wait for all embeddings to be generated
+            setParsedMessages(messages); // Store the parsed messages
             const clientInfo = WhatsAppParser.extractClientInfo(messages);
             
             setUploadedFiles(prev => prev.map(f => 
@@ -177,6 +196,22 @@ export function ChatUpload() {
                     <X className="w-5 h-5" />
                   </button>
                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Display Parsed Messages */}
+      {parsedMessages.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Parsed Messages</h3>
+          <div className="space-y-2">
+            {parsedMessages.map((msg, index) => (
+              <div key={index} className="p-4 bg-white border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-500">{new Date(msg.timestamp).toLocaleString()}</p>
+                <p className="font-semibold text-gray-900">{msg.sender}:</p>
+                <p className="text-gray-700">{msg.message}</p>
               </div>
             ))}
           </div>

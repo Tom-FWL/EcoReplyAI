@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'; // Make sure this import is correct based on your project structure
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './components/Login';
@@ -9,9 +9,14 @@ import { ChatUpload } from './pages/ChatUpload';
 import { MediaLibrary } from './pages/MediaLibrary';
 import { ConvertedDeals } from './pages/ConvertedDeals';
 import { AISuggestions } from './pages/AISuggestions';
-import { Settings } from './pages/Settings';
+import { Settings } from './pages/Settings'; // Make sure this import is correct based on your project structure
+import { loadUniversalSentenceEncoder } from './lib/ai-utils';
 
 function App() {
+  useEffect(() => {
+    loadUniversalSentenceEncoder();
+  }, []);
+
   return (
     <AuthProvider>
       <Router>

@@ -1,11 +1,16 @@
 import { Message } from '../types';
 
-export interface ParsedMessage {
+// Define the desired output structure
+export interface StructuredChatMessage {
   sender: string;
-  text: string;
-  timestamp: Date;
-  isMedia: boolean;
-  mediaType?: 'image' | 'document' | 'audio' | 'video';
+  message: string;
+  timestamp: string; // ISO format
+}
+
+// Keep the internal parsed message structure for intermediate processing if needed
+export interface ParsedMessageInternal extends StructuredChatMessage {
+ isMedia: boolean;
+  mediaType?: 'image' | 'document' | 'audio' | 'video'; // Optional for internal use
 }
 
 export class WhatsAppParser {
@@ -25,7 +30,7 @@ export class WhatsAppParser {
         const [day, month, year] = date.split('/').map(Number);
         const [hours, minutes, seconds] = time.split(':').map(Number);
         const timestamp = new Date(year, month - 1, day, hours, minutes, seconds);
-        
+
         // Check if message contains media
         const isMedia = text.includes('<Media omitted>') || 
                         text.includes('document omitted') ||
@@ -33,15 +38,20 @@ export class WhatsAppParser {
                         text.includes('audio omitted') ||
                         text.includes('video omitted');
         
+        // Format the timestamp to ISO string
+        const isoTimestamp = timestamp.toISOString();
+
         let mediaType: 'image' | 'document' | 'audio' | 'video' | undefined;
         if (isMedia) {
           if (text.includes('image')) mediaType = 'image';
           else if (text.includes('document')) mediaType = 'document';
           else if (text.includes('audio')) mediaType = 'audio';
           else if (text.includes('video')) mediaType = 'video';
-        }
+        } else {
+          // If not media, include the message text
+        }        
         
-        messages.push({
+        messages.push({ 
           sender: sender.trim(),
           text: text.trim(),
           timestamp,
